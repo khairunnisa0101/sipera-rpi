@@ -1,0 +1,20 @@
+# Virtual env
+venv/
+
+# Dataset & model
+face_database/
+models/
+*.pt
+
+# Logs & output
+*.txt
+*.jpg
+logs/
+Catatan_Presensi/
+
+# Environment
+.env
+
+# Python cache
+__pycache__/
+*.pyc
