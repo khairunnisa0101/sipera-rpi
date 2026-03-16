@@ -13,8 +13,6 @@ import hmac
 import hashlib
 import json
 from dotenv import load_dotenv
-import subprocess
-import psutil
 
 # --- ROOT PROJECT PATH ---
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,13 +28,6 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 def generate_signature(payload, secret):
     payload_str = json.dumps(payload, sort_keys=True)
     return hmac.new(secret.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
-
-def get_cpu_temp():
-    temp = subprocess.getoutput("vcgencmd measure_temp")
-    return float(temp.replace("temp=", "").replace("'C", ""))
-
-def get_cpu_usage():
-    return psutil.cpu_percent(interval=1)
     
 # --- GPIO Setup ---
 GPIO.setmode(GPIO.BCM)
@@ -145,20 +136,6 @@ try:
                             results = model(foto_path)
                             end_yolo = time()
                             durasi_yolo = end_yolo - start_yolo
-
-                            # --- Hitung total waktu ---
-                            end_total = time()
-                            durasi_total = end_total - start_face  # mulai dari face
-
-                            # --- Ambil CPU & suhu ---
-                            cpu_usage = get_cpu_usage()
-                            cpu_temp = get_cpu_temp()
-
-                            print(f"[TOTAL] {durasi_total:.2f}s | CPU: {cpu_usage}% | SUHU: {cpu_temp}C")
-
-                            # --- Simpan log ---
-                            with open("waktu_pengujian.txt", "a") as f:
-                                f.write(f"[{datetime.datetime.now()}] {id_siswa} | Wajah: {durasi_face:.2f}s | YOLO: {durasi_yolo:.2f}s | Total: {durasi_total:.2f}s | CPU: {cpu_usage}% | Suhu: {cpu_temp}C\n")
                                 
                             # --- Analisis atribut hasil YOLO ---
                             atribut = {"dasi": 0.0, "badge": 0.0, "sabuk": 0.0}
@@ -207,6 +184,22 @@ try:
                                     log.write(f"\n[{datetime.datetime.now()}] Exception API:\n{traceback.format_exc()}")
                                 print(f"[API ERROR] {type(e).__name__}: {str(e)[:100]} ...")
 
+                            # --- Hitung total waktu ---
+                            end_total = time()
+                            durasi_total = end_total - start_face  # mulai dari face
+
+                            # --- Simpan log ---
+                            with open("waktu_pengujian.txt", "a") as f:
+                                f.write(f"[{datetime.datetime.now()}] {id_siswa} | Wajah: {durasi_face:.2f}s | YOLO: {durasi_yolo:.2f}s | Total: {durasi_total:.2f}s\n")
+
+                            # --- Simpan log waktu ---
+                            with open("waktu_pengujian.txt", "a") as f:
+                                f.write(
+                                    f"[{datetime.datetime.now()}] {id_siswa} | "
+                                    f"Wajah: {durasi_face:.2f}s | "
+                                    f"YOLO: {durasi_yolo:.2f}s | "
+                                    f"Total: {durasi_total:.2f}s\n"
+                                )
 
                             # --- LED hijau berkedip 3 kali ---
                             for _ in range(3):
@@ -219,6 +212,7 @@ try:
                     else:
                         print(f"[PRESENSI] Wajah tidak cocok (cosine={cosine_distance:.3f} > {threshold}).")
 
+                # --- LED merah berkedip 3 kali jika tidak ada hasil cocok ---
                 else:
                     print("[INFO] Tidak ada hasil dari DeepFace.find(). Wajah tidak cocok dengan database.")
                     for _ in range(3):
